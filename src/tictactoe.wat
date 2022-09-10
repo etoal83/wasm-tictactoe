@@ -131,10 +131,59 @@
     )
   )
 
+  ;; Anti-clockwise rotation by 90deg
+  (func $rotate (param $source i32) (result i32)
+    (i32.add
+      (i32.add
+        (i32.add
+          ;; Index 0 -> 6 (bitshift +12)
+          (i32.shl
+            (i32.and (local.get $source) (i32.const 3))
+            (i32.const 12)
+          )
+          ;; Index 8 -> 2 (bitshift -12)
+          (i32.shr_u
+            (i32.and (local.get $source) (i32.const 196608))
+            (i32.const 12)
+          )
+        )
+        (i32.add
+          ;; Index 3 -> 7 (bitshift +8)
+          (i32.shl
+            (i32.and (local.get $source) (i32.const 192))
+            (i32.const 8)
+          )
+          ;; Index 5 -> 1 (bitshift -8)
+          (i32.shr_u
+            (i32.and (local.get $source) (i32.const 3072))
+            (i32.const 8)
+          )
+        )
+      )
+      (i32.add
+        (i32.add
+          ;; Index 1 -> 3, 6 -> 8 (bitshift +4)
+          (i32.shl
+            (i32.and (local.get $source) (i32.const 12300))
+            (i32.const 4)
+          )
+          ;; Index 2 -> 0, 7 -> 5 (bitshift -4)
+          (i32.shr_u
+            (i32.and (local.get $source) (i32.const 49200))
+            (i32.const 4)
+          )
+        )
+        ;; Index 4 (no change)
+        (i32.and (local.get $source) (i32.const 768))
+      )
+    )
+  )
+
   (export "vmirror" (func $vmirror))
   (export "hmirror" (func $hmirror))
   (export "dmirror" (func $dmirror))
   (export "amirror" (func $amirror))
+  (export "rotate"  (func $rotate))
 )
 
 ;; ;; Tests
@@ -154,3 +203,7 @@
 ;; ;; □■□                 □■■
 ;; ;; ■□□ ---(amirror)--> ■□□
 ;; ;; ■□■                 □□■
+;; (assert_return (invoke "rotate" (i32.const 209100)) (i32.const 246000))
+;; ;; □■□                 □□■
+;; ;; ■□□ ---(rotate)---> ■□□
+;; ;; ■□■                 □■■
