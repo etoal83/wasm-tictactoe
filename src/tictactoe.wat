@@ -23,6 +23,66 @@
   ;; - 10: X
   ;;
 
+  ;; Get minimum board representation as base state for deduplication
+  ;; by checking over symmetries 
+  (func $getBaseState (param $board i32) (result i32)
+    (local $m i32)
+    (local $r i32)
+    (local $s i32)
+    (local $base i32)
+    (local.set $base (local.get $board))
+
+    (block $exit
+      (loop $mloop  ;; loop over mirrorings
+        (br_if $exit (i32.ge_u (local.get $m) (i32.const 5)))
+        (local.set $s (local.get $board))
+        (local.set $s (call $mirror (local.get $s) (local.get $m)))
+        (local.set $m (i32.add (local.get $m) (i32.const 1)))
+        (local.set $r (i32.const 0))
+        (loop $rloop  ;; loop over rotations
+          (if (i32.lt_u (local.get $s) (local.get $base))
+            (then (local.set $base (local.get $s)))
+          )
+          (local.set $r (i32.add (local.get $r) (i32.const 1)))
+          (br_if $mloop (i32.ge_u (local.get $r) (i32.const 4)))
+          (local.set $s (call $rotate (local.get $s)))
+          (br $rloop)
+        )
+      )
+    )
+    (return (local.get $base))
+  )
+
+  ;; Call mirroring by integer for iteration
+  (func $mirror (param $source i32) (param $axis i32) (result i32)
+    ;; axis = 1: vmirror
+    (if (i32.eq (local.get $axis) (i32.const 1))
+      (then
+        (return (call $vmirror (local.get $source)))
+      )
+    )
+    ;; axis = 2: hmirror
+    (if (i32.eq (local.get $axis) (i32.const 2))
+      (then
+        (return (call $hmirror (local.get $source)))
+      )
+    )
+    ;; axis = 3: dmirror
+    (if (i32.eq (local.get $axis) (i32.const 3))
+      (then
+        (return (call $dmirror (local.get $source)))
+      )
+    )
+    ;; axis = 4: amirror
+    (if (i32.eq (local.get $axis) (i32.const 4))
+      (then
+        (return (call $amirror (local.get $source)))
+      )
+    )
+    ;; else: do nothing
+    (return (local.get $source))
+  )
+
   ;; Vertical mirroring
   (func $vmirror (param $source i32) (result i32)
     (i32.add
@@ -183,7 +243,9 @@
   (export "hmirror" (func $hmirror))
   (export "dmirror" (func $dmirror))
   (export "amirror" (func $amirror))
+  (export "mirror"  (func $mirror))
   (export "rotate"  (func $rotate))
+  (export "getBaseState" (func $getBaseState))
 )
 
 ;; ;; Tests
@@ -207,3 +269,7 @@
 ;; ;; □■□                 □□■
 ;; ;; ■□□ ---(rotate)---> ■□□
 ;; ;; ■□■                 □■■
+;; (assert_return (invoke "getBaseState" (i32.const 209100)) (i32.const 15375))
+;; ;; □■□                 ■■□
+;; ;; ■□□ --(BaseState)-> □□■
+;; ;; ■□■                 ■□□
