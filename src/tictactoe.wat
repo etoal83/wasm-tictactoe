@@ -22,6 +22,62 @@
   ;; - 01: O
   ;; - 10: X
   ;;
+  ;; Set mark O/X at index onto the board and return the resulted board
+  ;; otherwise return 0 for invalid operation
+  (func $setMark (param $board i32) (param $index i32) (param $mark i32) (result i32)
+    (if (result i32)
+      ;; Validate the manipulation
+      (i32.and
+        (i32.and
+          (call $isIndexInRange (local.get $index))
+          (call $isValidMark (local.get $mark))
+        )
+        (call $isSquareBlank (local.get $board) (local.get $index))
+      )
+      (then
+        (i32.or
+          (local.get $board)
+          (i32.shl
+            (local.get $mark)
+            (i32.mul (local.get $index) (i32.const 2))
+          )
+        )
+      )
+      (else
+        (i32.const 0)
+      )
+    )
+  )
+
+  ;; Check the given index is in the range of [0, 8]
+  (func $isIndexInRange (param $index i32) (result i32)
+    (i32.and
+      (i32.ge_u (local.get $index) (i32.const 0))
+      (i32.le_u (local.get $index) (i32.const 8))
+    )
+  )
+
+  ;; Check the given $mark is valid (either 1 or 2)
+  (func $isValidMark (param $mark i32) (result i32)
+    (i32.or
+      (i32.eq (local.get $mark) (i32.const 1))
+      (i32.eq (local.get $mark) (i32.const 2))
+    )
+  )
+
+  ;; Check the square at $index is blank (whether the bits equal `00`)
+  (func $isSquareBlank (param $board i32) (param $index i32) (result i32)
+    (i32.eq
+      (i32.and
+        (local.get $board)
+        (i32.shl
+          (i32.const 3)
+          (i32.mul (local.get $index) (i32.const 2))
+        )
+      )
+      (i32.const 0)
+    )
+  )
 
   ;; Get minimum board representation as base state for deduplication
   ;; by checking over symmetries 
@@ -239,6 +295,7 @@
     )
   )
 
+  (export "setMark" (func $setMark))
   (export "vmirror" (func $vmirror))
   (export "hmirror" (func $hmirror))
   (export "dmirror" (func $dmirror))
@@ -248,8 +305,20 @@
   (export "getBaseState" (func $getBaseState))
 )
 
-;; ;; Tests
-;; (assert_return (invoke "vmirror" (i32.const 209100)) (i32.const 49395))
+;; ------
+;;  SPEC TESTS
+;; ------
+;; ;; Game rules
+;; ;; - Mark O is successfully set to the square 0 in a board
+;; (assert_return (invoke "setMark" (i32.const 0) (i32.const 0) (i32.const 1)) (i32.const 1))
+;; ;; - Mark X is unsuccessfully set to the square 4 because already marked by O
+;; (assert_return (invoke "setMark" (i32.const 256) (i32.const 4) (i32.const 2)) (i32.const 0))
+;; ;; - Mark X is successfully set to the square 8 in a board
+;; (assert_return (invoke "setMark" (i32.const 26214) (i32.const 8) (i32.const 2)) (i32.const 157286))
+;; ;; - Mark O is unsuccessfully set because index out of range
+;; (assert_return (invoke "setMark" (i32.const 26214) (i32.const 9) (i32.const 1)) (i32.const 0))
+;; ;; - Invalid mark makes no operation
+;; (assert_return (invoke "setMark" (i32.const 26214) (i32.const 8) (i32.const 3)) (i32.const 0))
 ;; ;; □■□                 ■□■
 ;; ;; ■□□ ---(vmirror)--> ■□□
 ;; ;; ■□■                 □■□
