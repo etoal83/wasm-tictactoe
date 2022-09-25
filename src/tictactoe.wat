@@ -1,6 +1,6 @@
 (module
   ;; ------
-  ;;  Board representation
+  ;;  BOARD REPRESENTATION
   ;; ------
   ;; Square index:
   ;; +---+---+---+
@@ -18,9 +18,9 @@
   ;; (Unused 14 bits)|  8 7 6  5 4 3  2 1 0
   ;; 0000 0000 0000 00 000000 000000 000000
   ;;
-  ;; - 00: Blank
-  ;; - 01: O
-  ;; - 10: X
+  ;; - 0 = 00: Blank
+  ;; - 1 = 01: O
+  ;; - 2 = 10: X
   ;;
   ;; Set mark O/X at index onto the board and return the resulted board
   ;; otherwise return 0 for invalid operation
@@ -89,13 +89,15 @@
     (local.set $base (local.get $board))
 
     (block $exit
-      (loop $mloop  ;; loop over mirrorings
+      ;; loop over mirrorings in $m = [0, 5)
+      (loop $mloop
         (br_if $exit (i32.ge_u (local.get $m) (i32.const 5)))
         (local.set $s (local.get $board))
         (local.set $s (call $mirror (local.get $s) (local.get $m)))
         (local.set $m (i32.add (local.get $m) (i32.const 1)))
         (local.set $r (i32.const 0))
-        (loop $rloop  ;; loop over rotations
+        ;; loop over rotations in $r = [0, 4) 
+        (loop $rloop
           (if (i32.lt_u (local.get $s) (local.get $base))
             (then (local.set $base (local.get $s)))
           )
@@ -319,26 +321,34 @@
 ;; (assert_return (invoke "setMark" (i32.const 26214) (i32.const 9) (i32.const 1)) (i32.const 0))
 ;; ;; - Invalid mark makes no operation
 ;; (assert_return (invoke "setMark" (i32.const 26214) (i32.const 8) (i32.const 3)) (i32.const 0))
+
+;; ;; Symmetric operations
 ;; ;; □■□                 ■□■
 ;; ;; ■□□ ---(vmirror)--> ■□□
 ;; ;; ■□■                 □■□
-;; (assert_return (invoke "hmirror" (i32.const 209100)) (i32.const 211980))
+;; (assert_return (invoke "vmirror" (i32.const 209100)) (i32.const 49395))
+
 ;; ;; □■□                 □■□
 ;; ;; ■□□ ---(hmirror)--> □□■
 ;; ;; ■□■                 ■□■
-;; (assert_return (invoke "dmirror" (i32.const 209100)) (i32.const 64515))
+;; (assert_return (invoke "hmirror" (i32.const 209100)) (i32.const 211980))
+
 ;; ;; □■□                 ■□□
 ;; ;; ■□□ ---(dmirror)--> □□■
 ;; ;; ■□■                 ■■□
-;; (assert_return (invoke "amirror" (i32.const 209100)) (i32.const 196860))
+;; (assert_return (invoke "dmirror" (i32.const 209100)) (i32.const 64515))
+
 ;; ;; □■□                 □■■
 ;; ;; ■□□ ---(amirror)--> ■□□
 ;; ;; ■□■                 □□■
-;; (assert_return (invoke "rotate" (i32.const 209100)) (i32.const 246000))
+;; (assert_return (invoke "amirror" (i32.const 209100)) (i32.const 196860))
+
 ;; ;; □■□                 □□■
 ;; ;; ■□□ ---(rotate)---> ■□□
 ;; ;; ■□■                 □■■
-;; (assert_return (invoke "getBaseState" (i32.const 209100)) (i32.const 15375))
+;; (assert_return (invoke "rotate" (i32.const 209100)) (i32.const 246000))
+
 ;; ;; □■□                 ■■□
 ;; ;; ■□□ --(BaseState)-> □□■
 ;; ;; ■□■                 ■□□
+;; (assert_return (invoke "getBaseState" (i32.const 209100)) (i32.const 15375))
