@@ -23,6 +23,17 @@
   ;; - 2 = 10: X
   ;;
 
+  ;; Get the mark which has lines if exists, otherwise return 0 
+  (func $getWinner (param $board i32) (result i32)
+    (i32.or
+      (call $isOLined (local.get $board))
+      (i32.shl
+        (call $isXLined (local.get $board))
+        (i32.const 1)
+      )
+    )
+  )
+
   ;; Check whether the mark O is lined
   (func $isOLined (param $board i32) (result i32)
     (i32.or
