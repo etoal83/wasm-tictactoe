@@ -22,6 +22,123 @@
   ;; - 1 = 01: O
   ;; - 2 = 10: X
   ;;
+
+  ;; Check whether the mark O is lined
+  (func $isOLined (param $board i32) (result i32)
+    (i32.or
+      (i32.or
+        (i32.or
+          ;; 0-1-2
+          (i32.eq
+            (i32.and (local.get $board) (i32.const 63))
+            (i32.const 21)
+          )
+          ;; 3-4-5
+          (i32.eq
+            (i32.and (local.get $board) (i32.const 4032))
+            (i32.const 1344)
+          )
+        )
+        (i32.or
+          ;; 6-7-8
+          (i32.eq
+            (i32.and (local.get $board) (i32.const 258048))
+            (i32.const 86016)
+          )
+          ;; 0-3-6
+          (i32.eq
+            (i32.and (local.get $board) (i32.const 12483))
+            (i32.const 4161)
+          )
+        )
+      )
+      (i32.or
+        (i32.or
+          ;; 1-4-7
+          (i32.eq
+            (i32.and (local.get $board) (i32.const 49932))
+            (i32.const 16644)
+          )
+          ;; 2-5-8
+          (i32.eq
+            (i32.and (local.get $board) (i32.const 199728))
+            (i32.const 66576)
+          )
+        )
+        (i32.or
+          ;; 0-4-8
+          (i32.eq
+            (i32.and (local.get $board) (i32.const 197379))
+            (i32.const 65793)
+          )
+          ;; 2-4-6
+          (i32.eq
+            (i32.and (local.get $board) (i32.const 13104))
+            (i32.const 4368)
+          )
+        )
+      )
+    )
+  )
+
+  ;; Check whether the mark X is lined
+  (func $isXLined (param $board i32) (result i32)
+    (i32.or
+      (i32.or
+        (i32.or
+          ;; 0-1-2
+          (i32.eq
+            (i32.and (local.get $board) (i32.const 63))
+            (i32.const 42)
+          )
+          ;; 3-4-5
+          (i32.eq
+            (i32.and (local.get $board) (i32.const 4032))
+            (i32.const 2688)
+          )
+        )
+        (i32.or
+          ;; 6-7-8
+          (i32.eq
+            (i32.and (local.get $board) (i32.const 258048))
+            (i32.const 172032)
+          )
+          ;; 0-3-6
+          (i32.eq
+            (i32.and (local.get $board) (i32.const 12483))
+            (i32.const 8322)
+          )
+        )
+      )
+      (i32.or
+        (i32.or
+          ;; 1-4-7
+          (i32.eq
+            (i32.and (local.get $board) (i32.const 49932))
+            (i32.const 33288)
+          )
+          ;; 2-5-8
+          (i32.eq
+            (i32.and (local.get $board) (i32.const 199728))
+            (i32.const 133152)
+          )
+        )
+        (i32.or
+          ;; 0-4-8
+          (i32.eq
+            (i32.and (local.get $board) (i32.const 197379))
+            (i32.const 131586)
+          )
+          ;; 2-4-6
+          (i32.eq
+            (i32.and (local.get $board) (i32.const 13104))
+            (i32.const 8736)
+          )
+        )
+      )
+    )
+  )
+
   ;; Set mark O/X at index onto the board and return the resulted board
   ;; otherwise return 0 for invalid operation
   (func $setMark (param $board i32) (param $index i32) (param $mark i32) (result i32)
@@ -297,6 +414,7 @@
     )
   )
 
+  (export "getWinner" (func $getWinner))
   (export "setMark" (func $setMark))
   (export "vmirror" (func $vmirror))
   (export "hmirror" (func $hmirror))
@@ -311,16 +429,21 @@
 ;;  SPEC TESTS
 ;; ------
 ;; ;; Game rules
-;; ;; - Mark O is successfully set to the square 0 in a board
+;; ;; - unittests: setMark
+;; ;;   - Mark O is successfully set to the square 0 in a board
 ;; (assert_return (invoke "setMark" (i32.const 0) (i32.const 0) (i32.const 1)) (i32.const 1))
-;; ;; - Mark X is unsuccessfully set to the square 4 because already marked by O
+;; ;;   - Mark X is unsuccessfully set to the square 4 because already marked by O
 ;; (assert_return (invoke "setMark" (i32.const 256) (i32.const 4) (i32.const 2)) (i32.const 0))
-;; ;; - Mark X is successfully set to the square 8 in a board
+;; ;;   - Mark X is successfully set to the square 8 in a board
 ;; (assert_return (invoke "setMark" (i32.const 26214) (i32.const 8) (i32.const 2)) (i32.const 157286))
-;; ;; - Mark O is unsuccessfully set because index out of range
+;; ;;   - Mark O is unsuccessfully set because index out of range
 ;; (assert_return (invoke "setMark" (i32.const 26214) (i32.const 9) (i32.const 1)) (i32.const 0))
-;; ;; - Invalid mark makes no operation
+;; ;;   - Invalid mark makes no operation
 ;; (assert_return (invoke "setMark" (i32.const 26214) (i32.const 8) (i32.const 3)) (i32.const 0))
+;; ;; - unittests: getWinner
+;; (assert_return (invoke "getWinner" (i32.const 74153)) (i32.const 1))
+;; (assert_return (invoke "getWinner" (i32.const 137505)) (i32.const 2))
+;; (assert_return (invoke "getWinner" (i32.const 149760)) (i32.const 0))
 
 ;; ;; Symmetric operations
 ;; ;; □■□                 ■□■
