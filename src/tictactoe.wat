@@ -12,16 +12,125 @@
   ;; +---+---+---+
   ;;
   ;; Bit assignment:
+  ;; - Board (i32)
   ;; (Unused 14 bits)| 8  7 6  5 4  3 2  1 0
   ;; 0000 0000 0000 0000 0000 0000 0000 0000
   ;;
   ;; (Unused 14 bits)|  8 7 6  5 4 3  2 1 0
   ;; 0000 0000 0000 00 000000 000000 000000
   ;;
-  ;; - 0 = 00: Blank
-  ;; - 1 = 01: O
-  ;; - 2 = 10: X
+  ;; - Mark (2 bits)
+  ;; 0 = 00: Blank
+  ;; 1 = 01: O
+  ;; 2 = 10: X
   ;;
+  ;; - Game status (i32)
+  ;; 0000 0000 0000 0000 0000 0000 0000 0000
+  ;;                                 |   |||
+  ;;                                 |   |++-- 2 bits | 0: (reserved) / 1: O's turn / 2: X's turn / 3: Game is set
+  ;;                                 +---+---- 4 bits | Turn count (0-9)
+  ;; ------
+  ;;  MEMORY LAYOUT
+  ;; ------
+  ;; - 40 bytes from offest [0]: Game board state up to 9 turns
+  ;; 
+
+  (memory $mem 1)
+  (global $MEM_OFFSET_GAME_BOARD i32 (i32.const 0))
+  (global $gameStatus (mut i32) (i32.const 0))
+
+  ;; Get memory offset of the game board at turn N
+  (func $offsetForGameBoard (param $turn i32) (result i32)
+    (i32.add
+      (global.get $MEM_OFFSET_GAME_BOARD)
+      (i32.mul
+        (i32.const 4)
+        (local.get $turn)
+      )
+    )
+  )
+
+  ;; Query the current game status and game board in this turn
+  (func $queryGameStatus (result i32 i32)
+    (local $turn i32)
+    (local.set $turn (call $getCurrentTurnCount))
+
+    (global.get $gameStatus)
+    (i32.load
+      (call $offsetForGameBoard (local.get $turn))
+    )
+  )
+
+  (func $getCurrentTurnMark (result i32)
+    (i32.and
+      (global.get $gameStatus)
+      (i32.const 3)
+    )
+  )
+
+  (func $getCurrentTurnCount (result i32)
+    (i32.shr_u
+      (i32.and (global.get $gameStatus) (i32.const 60)) ;; 111100
+      (i32.const 2)
+    )
+  )
+
+  (func $getCurrentGameBoard (result i32)
+    (i32.load
+      (call $offsetForGameBoard
+        (i32.sub (call $getCurrentTurnCount) (i32.const 1))
+      )
+    )
+  )
+
+  ;; Advance turn by putting the mark at the given square index
+  ;; return gameStatus with successful command, otherwise return 0 
+  (func $advanceTurn (param $index i32) (result i32)
+    (local $board i32)
+    (local $currentTurnMark i32)
+    (local $turn i32)
+    (local $boardAfterSet i32)
+
+    (local.set $currentTurnMark (call $getCurrentTurnMark))
+    (local.set $turn (call $getCurrentTurnCount))
+    (local.set $board (call $getCurrentGameBoard))
+    (local.set $boardAfterSet
+      (call $setMark (local.get $board) (local.get $index) (local.get $currentTurnMark))
+    )
+
+    (if (result i32)
+      (local.get $boardAfterSet)
+      (then
+        ;; Store the resulted board
+        (i32.store
+          (call $offsetForGameBoard (local.get $turn))
+          (local.get $boardAfterSet)
+        )
+        ;; Update game status
+        (if (call $getWinner (local.get $boardAfterSet))
+          (then
+            (global.set $gameStatus
+              (i32.or (global.get $gameStatus) (i32.const 3))
+            )
+          )
+          (else
+            (global.set $gameStatus
+              (i32.add
+                ;; Toggle turn mark
+                (i32.xor (global.get $gameStatus) (i32.const 3))
+                ;; Increment turn count
+                (i32.const 4)
+              )
+            )
+          )
+        )
+        (global.get $gameStatus)
+      )
+      (else
+        (i32.const 0)
+      )
+    )
+  )
 
   ;; Get the mark which has lines if exists, otherwise return 0 
   (func $getWinner (param $board i32) (result i32)
@@ -425,7 +534,22 @@
     )
   )
 
+  (func $init
+    (i32.store
+      (call $offsetForGameBoard (i32.const 0))
+      (i32.const 0)
+    )
+    (global.set $gameStatus (i32.const 5))
+  )
+
+  (start $init)
+
+  (export "queryGameStatus" (func $queryGameStatus))
+  (export "getCurrentTurnMark" (func $getCurrentTurnMark))
+  (export "getCurrentTurnCount" (func $getCurrentTurnCount))
+  (export "getCurrentGameBoard" (func $getCurrentGameBoard))
   (export "getWinner" (func $getWinner))
+  (export "advanceTurn" (func $advanceTurn))
   (export "setMark" (func $setMark))
   (export "vmirror" (func $vmirror))
   (export "hmirror" (func $hmirror))
